@@ -6,6 +6,17 @@
 (function () {
   'use strict';
 
+  function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      try { return crypto.randomUUID(); } catch (e) {}
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   // =========================================================================
   // STATE MANAGEMENT
   // =========================================================================
@@ -26,7 +37,7 @@
     },
     currentSale: {
       header: {
-        khoa: '',
+        khoa: generateUUID(),
         lct: 'BLE',
         sct: '00001',
         ngay: new Date().toISOString(),
@@ -693,6 +704,16 @@
   }
 
   function renderCart() {
+    if (!state.currentSale) {
+      state.currentSale = { header: {}, items: [] };
+    }
+    if (!state.currentSale.items) {
+      state.currentSale.items = [];
+    }
+    if (!state.currentSale.header) {
+      state.currentSale.header = {};
+    }
+
     const { items, header } = state.currentSale;
     dom.cartItemsBody.innerHTML = '';
 
@@ -711,12 +732,12 @@
         tr.dataset.index = index;
 
         tr.innerHTML = `
-          <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${item.stt}</td>
+          <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${item.stt || (index + 1)}</td>
           <td>
-            <div class="cart-item-name">${item.tenvt}</div>
-            <div class="cart-item-code">${item.mavt} ${item.ghichu ? ' • ' + item.ghichu : ''}</div>
+            <div class="cart-item-name">${item.tenvt || ''}</div>
+            <div class="cart-item-code">${item.mavt || ''} ${item.ghichu ? ' • ' + item.ghichu : ''}</div>
           </td>
-          <td style="text-align: center; color: var(--text-secondary);">${item.dvt}</td>
+          <td style="text-align: center; color: var(--text-secondary);">${item.dvt || 'Cái'}</td>
           <td style="text-align: center;">
             <span class="qty-badge" data-action="change-qty" data-index="${index}">${item.soluong}</span>
           </td>
@@ -856,8 +877,12 @@
       showToast(`Đã tăng [${product.tenvt}] lên SL: ${state.currentSale.items[existingIdx].soluong}`, 'info');
     } else {
       const taxRate = product.vat_ra || (product.loaithue === 'T08' ? 8 : (product.loaithue === 'T05' ? 5 : (product.loaithue === 'T00' ? 0 : 10)));
+      const currentKhoa = state.currentSale.header.khoa || generateUUID();
+      state.currentSale.header.khoa = currentKhoa;
+
       const newItem = {
-        khoact: 'ct-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+        khoact: generateUUID(),
+        khoa: currentKhoa,
         stt: state.currentSale.items.length + 1,
         mavt: product.mavt,
         tenvt: product.tenvt,
@@ -903,19 +928,39 @@
   }
 
   async function recalculateAndRefresh() {
-    const updated = await api.calculateCart(state.currentSale);
-    state.currentSale = updated;
-    renderCart();
+    try {
+      const updated = await api.calculateCart(state.currentSale);
+      if (updated && updated.items) {
+        state.currentSale = updated;
+      } else {
+        state.currentSale = localCalculateCart(state.currentSale);
+      }
+    } catch (err) {
+      console.warn('Backend calculateCart failed, falling back to local calculation:', err);
+      state.currentSale = localCalculateCart(state.currentSale);
+    } finally {
+      renderCart();
+    }
   }
 
   async function startNewSale() {
-    const fresh = await api.prepareNewSale();
+    let fresh = null;
+    try {
+      fresh = await api.prepareNewSale();
+    } catch (err) {
+      console.warn('prepareNewSale failed, using fallback:', err);
+    }
+
+    const freshKhoa = (fresh && fresh.khoa) ? fresh.khoa : generateUUID();
+    const freshSct = (fresh && fresh.sct) ? fresh.sct : ('00000' + Math.floor(Math.random() * 90000 + 10000)).slice(-5);
+    const freshNgay = (fresh && fresh.ngay) ? fresh.ngay : new Date().toISOString();
+
     state.currentSale = {
       header: {
         ...state.currentSale.header,
-        khoa: fresh.khoa,
-        sct: fresh.sct,
-        ngay: fresh.ngay || new Date().toISOString(),
+        khoa: freshKhoa,
+        sct: freshSct,
+        ngay: freshNgay,
         soluong: 0,
         sotien: 0,
         chietkhau: 0,

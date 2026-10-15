@@ -107,6 +107,7 @@ func (s *SaleService) CompletePayment(ctx context.Context, header *models.BanleT
 func (s *SaleService) RecalculateSale(header *models.BanleTam, items []models.BanleTamCT) {
 	for i := range items {
 		item := &items[i]
+		item.STT = i + 1
 		s.discountServ.CalculateLineItemDiscount(item, 50.0)
 		s.taxServ.CalculateTaxForLine(item)
 	}

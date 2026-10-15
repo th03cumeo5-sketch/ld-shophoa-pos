@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -72,4 +73,96 @@ type BanleTamCT struct {
 type SaleDTO struct {
 	Header BanleTam     `json:"header"`
 	Items  []BanleTamCT `json:"items"`
+}
+
+// UnmarshalJSON cho BanleTam tự động xử lý chuỗi rỗng / GUID không hợp lệ / định dạng ngày tháng linh hoạt
+func (b *BanleTam) UnmarshalJSON(data []byte) error {
+	type Alias BanleTam
+	aux := &struct {
+		Khoa       string `json:"khoa"`
+		Ngay       string `json:"ngay"`
+		CreateDate string `json:"create_date"`
+		UpdateDate string `json:"update_date"`
+		*Alias
+	}{
+		Alias: (*Alias)(b),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if aux.Khoa == "" || aux.Khoa == "null" {
+		b.Khoa = uuid.New()
+	} else {
+		u, err := uuid.Parse(aux.Khoa)
+		if err != nil {
+			b.Khoa = uuid.New()
+		} else {
+			b.Khoa = u
+		}
+	}
+
+	if aux.Ngay != "" {
+		if t, err := time.Parse(time.RFC3339, aux.Ngay); err == nil {
+			b.Ngay = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05.000Z", aux.Ngay); err == nil {
+			b.Ngay = t
+		} else {
+			b.Ngay = time.Now()
+		}
+	} else if b.Ngay.IsZero() {
+		b.Ngay = time.Now()
+	}
+
+	if aux.CreateDate != "" {
+		if t, err := time.Parse(time.RFC3339, aux.CreateDate); err == nil {
+			b.CreateDate = t
+		}
+	}
+	if aux.UpdateDate != "" {
+		if t, err := time.Parse(time.RFC3339, aux.UpdateDate); err == nil {
+			b.UpdateDate = t
+		}
+	}
+
+	return nil
+}
+
+// UnmarshalJSON cho BanleTamCT tự động sinh UUID mới nếu client gửi mã dạng chuỗi tạm thời (ct-...) hoặc rỗng
+func (c *BanleTamCT) UnmarshalJSON(data []byte) error {
+	type Alias BanleTamCT
+	aux := &struct {
+		KhoaCT string `json:"khoact"`
+		Khoa   string `json:"khoa"`
+		*Alias
+	}{
+		Alias: (*Alias)(c),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if aux.KhoaCT == "" || aux.KhoaCT == "null" {
+		c.KhoaCT = uuid.New()
+	} else {
+		u, err := uuid.Parse(aux.KhoaCT)
+		if err != nil {
+			c.KhoaCT = uuid.New()
+		} else {
+			c.KhoaCT = u
+		}
+	}
+
+	if aux.Khoa == "" || aux.Khoa == "null" {
+		c.Khoa = uuid.Nil
+	} else {
+		u, err := uuid.Parse(aux.Khoa)
+		if err != nil {
+			c.Khoa = uuid.Nil
+		} else {
+			c.Khoa = u
+		}
+	}
+
+	return nil
 }

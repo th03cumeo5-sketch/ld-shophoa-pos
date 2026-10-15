@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"testing"
 	"time"
@@ -216,5 +217,50 @@ func TestCompareCalculationsWithRealDatabaseRecords(t *testing.T) {
 	}
 	t.Logf("✓ Successfully verified %d real historical rows with 100%% precision!", count)
 }
+
+func TestJsonUnmarshalSaleDTO(t *testing.T) {
+	rawJSON := []byte(`{
+		"header": {
+			"khoa": "",
+			"lct": "BLE",
+			"sct": "00001",
+			"ngay": "2026-10-15T18:18:00.000Z",
+			"loc": "01",
+			"makho": "01",
+			"quay": "01",
+			"ca": "1",
+			"thungan": "ntd",
+			"create_date": ""
+		},
+		"items": [
+			{
+				"khoact": "ct-17382718-abc",
+				"mavt": "HOA001",
+				"tenvt": "Hoa Hong",
+				"dvt": "Canh",
+				"soluong": 1,
+				"dongia": 35000
+			}
+		]
+	}`)
+
+	var sale models.SaleDTO
+	err := json.Unmarshal(rawJSON, &sale)
+	if err != nil {
+		t.Fatalf("Expected successful unmarshal, got: %v", err)
+	}
+	if sale.Header.Khoa == uuid.Nil {
+		t.Errorf("Expected Header.Khoa to be populated with a valid UUID, got Nil")
+	}
+	if len(sale.Items) != 1 {
+		t.Fatalf("Expected 1 item, got %d", len(sale.Items))
+	}
+	if sale.Items[0].KhoaCT == uuid.Nil {
+		t.Errorf("Expected Items[0].KhoaCT to be populated with a valid UUID, got Nil")
+	}
+	t.Logf("✓ Successfully unmarshaled SaleDTO with resilient UUIDs: Khoa=%s, KhoaCT=%s",
+		sale.Header.Khoa, sale.Items[0].KhoaCT)
+}
+
 
 

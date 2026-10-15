@@ -320,10 +320,21 @@ func (a *App) PrepareNewSale() (*models.BanleTam, error) {
 
 // CalculateCart tính toán lại chiết khấu, thuế VAT và tổng tiền cho giỏ hàng
 func (a *App) CalculateCart(sale models.SaleDTO) (*models.SaleDTO, error) {
-	if a.saleServ == nil {
-		return nil, fmt.Errorf("chưa kết nối CSDL")
+	if a.saleServ != nil {
+		a.saleServ.RecalculateSale(&sale.Header, sale.Items)
+		return &sale, nil
 	}
-	a.saleServ.RecalculateSale(&sale.Header, sale.Items)
+	// Fallback in-memory calculator nếu chưa khởi tạo DB service
+	dServ := service.NewDiscountService()
+	tServ := service.NewTaxService()
+	for i := range sale.Items {
+		item := &sale.Items[i]
+		item.STT = i + 1
+		dServ.CalculateLineItemDiscount(item, 50.0)
+		tServ.CalculateTaxForLine(item)
+	}
+	dServ.CalculateHeaderDiscount(&sale.Header)
+	tServ.CalculateTotals(&sale.Header, sale.Items)
 	return &sale, nil
 }
 
