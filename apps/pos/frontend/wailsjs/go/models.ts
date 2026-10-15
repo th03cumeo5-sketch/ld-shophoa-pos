@@ -1,3 +1,36 @@
+export namespace main {
+	
+	export class DBProfile {
+	    id: string;
+	    name: string;
+	    server: string;
+	    database: string;
+	    user: string;
+	    password: string;
+	    driver: string;
+	    makho: string;
+	    quay: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DBProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.server = source["server"];
+	        this.database = source["database"];
+	        this.user = source["user"];
+	        this.password = source["password"];
+	        this.driver = source["driver"];
+	        this.makho = source["makho"];
+	        this.quay = source["quay"];
+	    }
+	}
+
+}
+
 export namespace models {
 	
 	export class BanleTam {
@@ -244,6 +277,46 @@ export namespace models {
 		    }
 		    return a;
 		}
+	}
+	export class SessionInfo {
+	    username: string;
+	    fullname: string;
+	    makho: string;
+	    tenkho: string;
+	    quay: string;
+	    ca: string;
+	    loc: string;
+	    profile_id: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SessionInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.username = source["username"];
+	        this.fullname = source["fullname"];
+	        this.makho = source["makho"];
+	        this.tenkho = source["tenkho"];
+	        this.quay = source["quay"];
+	        this.ca = source["ca"];
+	        this.loc = source["loc"];
+	        this.profile_id = source["profile_id"];
+	    }
+	}
+	export class Warehouse {
+	    makho: string;
+	    tenkho: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Warehouse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.makho = source["makho"];
+	        this.tenkho = source["tenkho"];
+	    }
 	}
 
 }

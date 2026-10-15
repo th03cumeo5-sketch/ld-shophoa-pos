@@ -12,7 +12,7 @@ func NewTaxService() *TaxService {
 	return &TaxService{}
 }
 
-// CalculateTaxForLine tính tiền thuế cho một dòng mặt hàng
+// CalculateTaxForLine tính tiền thuế cho một dòng mặt hàng (theo nguyên tắc giá bán lẻ đã gồm VAT)
 func (s *TaxService) CalculateTaxForLine(item *models.BanleTamCT) {
 	switch item.LoaiThue {
 	case "T00", "KCT":
@@ -30,12 +30,13 @@ func (s *TaxService) CalculateTaxForLine(item *models.BanleTamCT) {
 	}
 
 	if item.ThueSuat > 0 {
-		item.TienThue = math.Round(item.ThanhTienChuaVAT * (item.ThueSuat / 100.0))
+		// Bóc tách VAT từ số tiền thực trả của dòng
+		item.ThanhTienChuaVAT = math.Round(item.ThanhToan / (1.0 + item.ThueSuat/100.0))
+		item.TienThue = item.ThanhToan - item.ThanhTienChuaVAT
 	} else {
+		item.ThanhTienChuaVAT = item.ThanhToan
 		item.TienThue = 0
 	}
-
-	item.ThanhToan = item.ThanhTienChuaVAT + item.TienThue
 }
 
 // CalculateTotals tính tổng cộng toàn bộ hóa đơn từ các dòng chi tiết
@@ -60,9 +61,16 @@ func (s *TaxService) CalculateTotals(header *models.BanleTam, items []models.Ban
 	header.SoLuong = totalQty
 	header.SoTien = totalPreDiscount
 	header.ChietKhauMH = totalLineDiscount
-	header.ThanhTienChuaVAT = totalPreTax - header.ChietKhau
-	header.TienThue = totalTax
-	header.ThanhToan = finalPay - header.ChietKhau
+
+	header.ThanhToan = math.Max(0, finalPay-header.ChietKhau)
+	if finalPay > 0 && header.ChietKhau > 0 {
+		ratio := header.ThanhToan / finalPay
+		header.ThanhTienChuaVAT = math.Round(totalPreTax * ratio)
+		header.TienThue = header.ThanhToan - header.ThanhTienChuaVAT
+	} else {
+		header.ThanhTienChuaVAT = totalPreTax
+		header.TienThue = totalTax
+	}
 
 	// Cân đối tiền thừa
 	totalPaid := header.TToan1 + header.TToan2
@@ -72,3 +80,4 @@ func (s *TaxService) CalculateTotals(header *models.BanleTam, items []models.Ban
 		header.ChuaThoi = 0
 	}
 }
+

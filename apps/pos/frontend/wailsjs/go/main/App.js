@@ -10,6 +10,10 @@ export function CompletePayment(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['CompletePayment'](arg1, arg2, arg3, arg4);
 }
 
+export function DeleteDBProfile(arg1) {
+  return window['go']['main']['App']['DeleteDBProfile'](arg1);
+}
+
 export function DeleteDraftSale(arg1) {
   return window['go']['main']['App']['DeleteDraftSale'](arg1);
 }
@@ -22,6 +26,10 @@ export function GetCategories() {
   return window['go']['main']['App']['GetCategories']();
 }
 
+export function GetDBProfiles() {
+  return window['go']['main']['App']['GetDBProfiles']();
+}
+
 export function GetDraftSale(arg1) {
   return window['go']['main']['App']['GetDraftSale'](arg1);
 }
@@ -30,12 +38,28 @@ export function GetSessionInfo() {
   return window['go']['main']['App']['GetSessionInfo']();
 }
 
+export function GetWarehouses() {
+  return window['go']['main']['App']['GetWarehouses']();
+}
+
 export function ListDraftSales() {
   return window['go']['main']['App']['ListDraftSales']();
 }
 
+export function Login(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['Login'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function Logout() {
+  return window['go']['main']['App']['Logout']();
+}
+
 export function PrepareNewSale() {
   return window['go']['main']['App']['PrepareNewSale']();
+}
+
+export function SaveDBProfile(arg1) {
+  return window['go']['main']['App']['SaveDBProfile'](arg1);
 }
 
 export function SaveDraftSale(arg1) {
@@ -48,4 +72,8 @@ export function SearchCustomers(arg1) {
 
 export function SearchProducts(arg1, arg2) {
   return window['go']['main']['App']['SearchProducts'](arg1, arg2);
+}
+
+export function TestDBConnection(arg1) {
+  return window['go']['main']['App']['TestDBConnection'](arg1);
 }

@@ -1,7 +1,6 @@
 /**
  * ShopHoa POS - Frontend Application Engine
- * Integrates with Wails Go Backend & SQL Server 2019
- * Designed for high-speed cashier workflow with keyboard shortcuts.
+ * Integrates with Wails Go Backend, Multi-DB Connection Profiles & SQL Server 2019
  */
 
 (function () {
@@ -12,13 +11,18 @@
   // =========================================================================
   const state = {
     isWails: Boolean(window.go && window.go.main && window.go.main.App),
+    isLoggedIn: false,
+    dbProfiles: [],
+    activeProfileId: '',
     session: {
+      username: '',
+      fullname: '',
       makho: '01',
+      tenkho: 'Kho Trung Tâm',
       quay: '01',
-      ca: 'Ca Sáng',
-      thungan: 'ntd',
-      loc: 'Cửa hàng Q2 (Kho: K01)',
-      time: ''
+      ca: '1',
+      loc: '01',
+      profile_id: 'default'
     },
     currentSale: {
       header: {
@@ -67,30 +71,91 @@
     searchResults: []
   };
 
-  // Backend API Proxy (uses Wails runtime if available, else mock engine)
+  // Backend API Proxy (uses Wails runtime if available, else local mock)
   const api = {
-    async getSessionInfo() {
+    async getDBProfiles() {
       if (state.isWails) {
-        return window.go.main.App.GetSessionInfo();
+        return window.go.main.App.GetDBProfiles();
       }
-      return state.session;
+      return {
+        active_id: 'default',
+        profiles: [
+          {
+            id: 'default',
+            name: 'Cửa hàng Q2 (.\\sqlexpress - Mặc định)',
+            server: '.\\sqlexpress',
+            database: 'SOFTZ_SHOPHOA',
+            user: 'sa',
+            password: '123@456',
+            driver: 'ODBC Driver 17 for SQL Server',
+            makho: '01',
+            quay: '01'
+          }
+        ]
+      };
+    },
+    async saveDBProfile(profile) {
+      if (state.isWails) {
+        return window.go.main.App.SaveDBProfile(profile);
+      }
+      const idx = mockProfiles.findIndex(p => p.id === profile.id);
+      if (idx >= 0) mockProfiles[idx] = profile;
+      else mockProfiles.push(profile);
+      return true;
+    },
+    async deleteDBProfile(id) {
+      if (state.isWails) {
+        return window.go.main.App.DeleteDBProfile(id);
+      }
+      mockProfiles = mockProfiles.filter(p => p.id !== id);
+      return true;
+    },
+    async testDBConnection(profile) {
+      if (state.isWails) {
+        return window.go.main.App.TestDBConnection(profile);
+      }
+      return `✓ Kết nối thành công tới database [${profile.database}] trên máy chủ [${profile.server}]!`;
+    },
+    async login(username, password, ca, quay, profileId) {
+      if (state.isWails) {
+        return window.go.main.App.Login(username, password, ca, quay, profileId);
+      }
+      // Mock login
+      if (username.toLowerCase() === 'ntd' || username.toUpperCase() === 'ADMIN') {
+        return {
+          username: username,
+          fullname: username.toUpperCase() === 'ADMIN' ? 'Quản trị viên' : 'Nguyễn Thu Ngân',
+          makho: '01',
+          tenkho: 'Kho Trung Tâm (Q2)',
+          quay: quay || '01',
+          ca: ca || '1',
+          loc: '01',
+          profile_id: profileId || 'default'
+        };
+      }
+      throw new Error("Tài khoản hoặc mật khẩu không chính xác");
+    },
+    async logout() {
+      if (state.isWails) {
+        return window.go.main.App.Logout();
+      }
+      return true;
     },
     async prepareNewSale() {
       if (state.isWails) {
         return window.go.main.App.PrepareNewSale();
       }
-      // Mock bill generator
       const mockSct = String(Math.floor(Math.random() * 90000) + 10000);
       return {
         khoa: 'mock-' + Date.now(),
         lct: 'BLE',
         sct: mockSct,
         ngay: new Date().toISOString(),
-        loc: '01',
-        makho: '01',
-        quay: '01',
-        ca: '1',
-        thungan: 'ntd',
+        loc: state.session.loc || '01',
+        makho: state.session.makho || '01',
+        quay: state.session.quay || '01',
+        ca: state.session.ca || '1',
+        thungan: state.session.username || 'ntd',
         printed: false
       };
     },
@@ -113,8 +178,7 @@
         { manhom: '2401', tennhom: 'Ly + Bình hoa', count: 45 },
         { manhom: '1901', tennhom: 'Lưu niệm & Quà', count: 68 },
         { manhom: '3101', tennhom: 'Thiệp & Nơ', count: 35 },
-        { manhom: '5005', tennhom: 'Giấy gói quà', count: 50 },
-        { manhom: '2403', tennhom: 'Giỏ trái cây', count: 25 }
+        { manhom: '5005', tennhom: 'Giấy gói quà', count: 50 }
       ];
     },
     async getCatalogProducts(limit) {
@@ -170,40 +234,90 @@
     }
   };
 
-  // Mock Data for offline preview & testing
+  // Mock Fallback Data
+  let mockProfiles = [
+    {
+      id: 'default',
+      name: 'Cửa hàng Q2 (.\\sqlexpress - Mặc định)',
+      server: '.\\sqlexpress',
+      database: 'SOFTZ_SHOPHOA',
+      user: 'sa',
+      password: '123@456',
+      driver: 'ODBC Driver 17 for SQL Server',
+      makho: '01',
+      quay: '01'
+    }
+  ];
+
   const mockProducts = [
+    { mavt: '11035121', tenvt: 'Khăn choàng cao cấp', dvt: 'Cái', giaban: 209000, loaithue: 'T08', vat_ra: 8, manhom: '2402' },
     { mavt: 'HOA001', tenvt: 'Hoa Hồng Đỏ Ecuador cao cấp', dvt: 'Cành', giaban: 35000, loaithue: 'T10', vat_ra: 10, manhom: '2402' },
     { mavt: 'HOA002', tenvt: 'Hoa Hồng Ohara Trắng thơm', dvt: 'Cành', giaban: 40000, loaithue: 'T10', vat_ra: 10, manhom: '2402' },
     { mavt: 'HOA003', tenvt: 'Cúc Tana Hà Lan nhập khẩu', dvt: 'Bó', giaban: 120000, loaithue: 'T05', vat_ra: 5, manhom: '2402' },
-    { mavt: 'HOA004', tenvt: 'Baby Trắng phun màu Pastel', dvt: 'Bó', giaban: 150000, loaithue: 'T05', vat_ra: 5, manhom: '2402' },
     { mavt: 'HOA005', tenvt: 'Lan Hồ Điệp Tím 5 cành', dvt: 'Chậu', giaban: 1250000, loaithue: 'T10', vat_ra: 10, manhom: '2402' },
-    { mavt: 'HOA006', tenvt: 'Lẵng hoa Khai Trương Phát Tài', dvt: 'Lẵng', giaban: 850000, loaithue: 'T10', vat_ra: 10, manhom: '2402' },
     { mavt: 'BINH01', tenvt: 'Bình hoa Thủy tinh Pha lê', dvt: 'Cái', giaban: 220000, loaithue: 'T10', vat_ra: 10, manhom: '2401' },
-    { mavt: 'BINH02', tenvt: 'Bình gốm sứ Bát Tràng cắm hoa', dvt: 'Cái', giaban: 180000, loaithue: 'T10', vat_ra: 10, manhom: '2401' },
     { mavt: 'GIFT01', tenvt: 'Gấu bông tốt nghiệp mini', dvt: 'Con', giaban: 95000, loaithue: 'T10', vat_ra: 10, manhom: '1901' },
     { mavt: 'THIEP1', tenvt: 'Thiệp hoa khô Handmade', dvt: 'Cái', giaban: 25000, loaithue: 'T08', vat_ra: 8, manhom: '3101' },
-    { mavt: 'GOI001', tenvt: 'Giấy gói hoa chống thấm Hàn Quốc', dvt: 'Xấp', giaban: 65000, loaithue: 'T08', vat_ra: 8, manhom: '5005' },
-    { mavt: 'GOI002', tenvt: 'Ruy băng lụa thắt nơ cao cấp', dvt: 'Cuộn', giaban: 45000, loaithue: 'T08', vat_ra: 8, manhom: '5005' }
+    { mavt: 'GOI001', tenvt: 'Giấy gói hoa chống thấm Hàn Quốc', dvt: 'Xấp', giaban: 65000, loaithue: 'T08', vat_ra: 8, manhom: '5005' }
   ];
 
   const mockCustomers = [
     { madt: 'KH001', tendt: 'Nguyễn Thị Mai', dienthoai: '0903123456', mavip: 'VIP01' },
-    { madt: 'KH002', tendt: 'Trần Văn Hùng', dienthoai: '0918765432', mavip: '' },
-    { madt: 'KH003', tendt: 'Công ty Cổ phần Alpha', dienthoai: '0283888999', mavip: 'VIP02' }
+    { madt: 'KH002', tendt: 'Trần Văn Hùng', dienthoai: '0918765432', mavip: '' }
   ];
 
   let mockDrafts = [];
 
   // =========================================================================
-  // DOM ELEMENTS
+  // DOM REFERENCES
   // =========================================================================
   const dom = {
+    // Views
+    viewLogin: document.getElementById('view-login'),
+    viewPos: document.getElementById('view-pos'),
+
+    // Login Elements
+    loginDbProfileSelect: document.getElementById('login-db-profile-select'),
+    btnManageDbProfiles: document.getElementById('btn-manage-db-profiles'),
+    loginUsername: document.getElementById('login-username'),
+    loginPassword: document.getElementById('login-password'),
+    loginQuaySelect: document.getElementById('login-quay-select'),
+    loginDbStatusText: document.getElementById('login-db-status-text'),
+    btnDoLogin: document.getElementById('btn-do-login'),
+
+    // DB Profiles Modal Elements
+    modalDbProfiles: document.getElementById('modal-db-profiles'),
+    profilesListBody: document.getElementById('profiles-list-body'),
+    profileInputId: document.getElementById('profile-input-id'),
+    profileInputName: document.getElementById('profile-input-name'),
+    profileInputServer: document.getElementById('profile-input-server'),
+    profileInputDb: document.getElementById('profile-input-db'),
+    profileInputDriver: document.getElementById('profile-input-driver'),
+    profileInputUser: document.getElementById('profile-input-user'),
+    profileInputPass: document.getElementById('profile-input-pass'),
+    profileInputMakho: document.getElementById('profile-input-makho'),
+    profileInputQuay: document.getElementById('profile-input-quay'),
+    profileTestResult: document.getElementById('profile-test-result'),
+    btnTestDbConnection: document.getElementById('btn-test-db-connection'),
+    btnSaveDbProfile: document.getElementById('btn-save-db-profile'),
+
+    // POS Header Elements
     barcodeInput: document.getElementById('barcode-input'),
     searchResultsDropdown: document.getElementById('search-results-dropdown'),
     orderSct: document.getElementById('order-sct'),
     orderTime: document.getElementById('order-time'),
     customerName: document.getElementById('customer-name'),
     btnCustomer: document.getElementById('btn-customer'),
+    sessionShift: document.getElementById('session-shift'),
+    sessionCashier: document.getElementById('session-cashier'),
+    sessionStore: document.getElementById('session-store'),
+    sessionClock: document.getElementById('session-clock'),
+    btnDoLogout: document.getElementById('btn-do-logout'),
+    btnSearchOrder: document.getElementById('btn-search-order'),
+    btnReprint: document.getElementById('btn-reprint'),
+    btnLock: document.getElementById('btn-lock'),
+
+    // Cart Elements
     cartItemsBody: document.getElementById('cart-items-body'),
     cartEmpty: document.getElementById('cart-empty'),
     totalQty: document.getElementById('total-qty'),
@@ -211,10 +325,14 @@
     discountVal: document.getElementById('discount-val'),
     taxVal: document.getElementById('tax-val'),
     grandTotalVal: document.getElementById('grand-total-val'),
+
+    // Catalog Elements
     catalogTabs: document.getElementById('catalog-tabs'),
     catalogGrid: document.getElementById('catalog-grid'),
     catalogFilterInput: document.getElementById('catalog-filter-input'),
     draftCountBadge: document.getElementById('draft-count'),
+
+    // Action Bar Buttons
     btnChangeQty: document.getElementById('btn-change-qty'),
     btnDiscount: document.getElementById('btn-discount'),
     btnDiscountTag: document.getElementById('btn-discount-tag'),
@@ -223,16 +341,8 @@
     btnReturnMode: document.getElementById('btn-return-mode'),
     btnCancelOrder: document.getElementById('btn-cancel-order'),
     btnCheckout: document.getElementById('btn-checkout'),
-    btnSearchOrder: document.getElementById('btn-search-order'),
-    btnReprint: document.getElementById('btn-reprint'),
-    btnLock: document.getElementById('btn-lock'),
-    sessionShift: document.getElementById('session-shift'),
-    sessionCashier: document.getElementById('session-cashier'),
-    sessionStore: document.getElementById('session-store'),
-    sessionClock: document.getElementById('session-clock'),
-    toastContainer: document.getElementById('toast-container'),
 
-    // Modals
+    // Payment Modal
     modalPayment: document.getElementById('modal-payment'),
     modalPaySct: document.getElementById('modal-pay-sct'),
     modalPayTotal: document.getElementById('modal-pay-total'),
@@ -244,6 +354,7 @@
     sectionQr: document.getElementById('section-qr'),
     qrMemo: document.getElementById('qr-memo'),
 
+    // Other Modals
     modalQty: document.getElementById('modal-qty'),
     qtyItemTitle: document.getElementById('qty-item-title'),
     inputNewQty: document.getElementById('input-new-qty'),
@@ -264,11 +375,13 @@
 
     modalLock: document.getElementById('modal-lock'),
     inputUnlockPass: document.getElementById('input-unlock-pass'),
-    btnUnlock: document.getElementById('btn-unlock')
+    btnUnlock: document.getElementById('btn-unlock'),
+
+    toastContainer: document.getElementById('toast-container')
   };
 
   // =========================================================================
-  // UTILITY FUNCTIONS
+  // UTILITIES
   // =========================================================================
   function formatMoney(amount) {
     if (isNaN(amount) || amount === null) amount = 0;
@@ -302,66 +415,283 @@
   }
 
   // =========================================================================
-  // CORE CALCULATION ENGINE (Offline Mirror of Go Core Service)
+  // CALCULATION LOGIC (VAT-Inclusive Retail Standard)
   // =========================================================================
   function localCalculateCart(sale) {
     let totalQty = 0;
     let subtotal = 0;
     let totalCKLines = 0;
+    let totalPreTax = 0;
     let totalTax = 0;
+    let finalPay = 0;
 
     sale.items.forEach((item, idx) => {
       item.stt = idx + 1;
       const qty = parseFloat(item.soluong) || 0;
       const price = parseFloat(item.dongia) || 0;
-      const lineTotal = qty * price;
+      const lineTotal = Math.round(qty * price);
       item.sotien = lineTotal;
 
-      // Line discount rate: tổng hợp các tỷ lệ chiết khấu
-      const totalLineRate = (parseFloat(item.tl_ck2) || 0) + (parseFloat(item.tl_ck3) || 0) +
-                            (parseFloat(item.tl_ck4) || 0) + (parseFloat(item.tl_ck5) || 0) + (parseFloat(item.tl_ck) || 0);
-      const rate = Math.min(totalLineRate, 50.0); // trần 50%
-      const lineCK = (lineTotal * rate) / 100.0;
-      item.chietkhau = lineCK;
-      item.dongia_sauck = qty > 0 ? (lineTotal - lineCK) / qty : price;
+      const totalLineRate = Math.max(
+        parseFloat(item.tl_ck) || 0,
+        parseFloat(item.tl_ck2) || 0,
+        parseFloat(item.tl_ck3) || 0,
+        parseFloat(item.tl_ck4) || 0,
+        parseFloat(item.tl_ck5) || 0
+      );
+      item.tl_ck = totalLineRate;
 
-      // Tax
-      const taxRate = parseFloat(item.vat_ra) || 10;
-      const taxable = lineTotal - lineCK;
-      const lineTax = (taxable * taxRate) / 100.0;
+      const lineCK = Math.round(lineTotal * (totalLineRate / 100.0));
+      item.chietkhau = lineCK;
+      item.dongia_sauck = qty !== 0 ? Math.round((lineTotal - lineCK) / qty) : price;
+      item.thanhtoan = lineTotal - lineCK;
+
+      const taxRate = parseFloat(item.thue_suat) || (item.loaithue === 'T08' ? 8 : (item.loaithue === 'T05' ? 5 : (item.loaithue === 'T00' ? 0 : 10)));
       item.thue_suat = taxRate;
-      item.tien_thue = lineTax;
-      item.thanhtien_chua_vat = taxable;
-      item.thanhtoan = taxable + lineTax;
+
+      if (taxRate > 0) {
+        item.thanhtien_chua_vat = Math.round(item.thanhtoan / (1.0 + taxRate / 100.0));
+        item.tien_thue = item.thanhtoan - item.thanhtien_chua_vat;
+      } else {
+        item.thanhtien_chua_vat = item.thanhtoan;
+        item.tien_thue = 0;
+      }
 
       totalQty += qty;
       subtotal += lineTotal;
       totalCKLines += lineCK;
-      totalTax += lineTax;
+      totalPreTax += item.thanhtien_chua_vat;
+      totalTax += item.tien_thue;
+      finalPay += item.thanhtoan;
     });
 
-    // Header discount
     let headerCK = 0;
     if (sale.header.tl_ck > 0) {
-      headerCK = (subtotal * sale.header.tl_ck) / 100.0;
+      headerCK = Math.round((subtotal - totalCKLines) * (sale.header.tl_ck / 100.0));
     } else if (sale.header.chietkhau > 0) {
       headerCK = sale.header.chietkhau;
     }
-    sale.header.chietkhau = headerCK;
-    sale.header.chietkhau_mh = totalCKLines;
 
     sale.header.soluong = totalQty;
     sale.header.sotien = subtotal;
-    sale.header.thanhtien_chua_vat = subtotal - totalCKLines - headerCK;
-    sale.header.tien_thue = totalTax;
-    sale.header.thanhtoan = Math.max(0, (subtotal - totalCKLines - headerCK) + totalTax);
+    sale.header.chietkhau_mh = totalCKLines;
+    sale.header.chietkhau = headerCK;
+    sale.header.thanhtoan = Math.max(0, finalPay - headerCK);
+
+    if (finalPay > 0 && headerCK > 0) {
+      const ratio = sale.header.thanhtoan / finalPay;
+      sale.header.thanhtien_chua_vat = Math.round(totalPreTax * ratio);
+      sale.header.tien_thue = sale.header.thanhtoan - sale.header.thanhtien_chua_vat;
+    } else {
+      sale.header.thanhtien_chua_vat = totalPreTax;
+      sale.header.tien_thue = totalTax;
+    }
 
     return sale;
   }
 
   // =========================================================================
-  // UI RENDERING
+  // LOGIN & CONNECTION PROFILES UI
   // =========================================================================
+  async function loadAndRenderDBProfiles() {
+    try {
+      const data = await api.getDBProfiles();
+      state.dbProfiles = data.profiles || [];
+      state.activeProfileId = data.active_id || (state.dbProfiles[0] ? state.dbProfiles[0].id : '');
+
+      dom.loginDbProfileSelect.innerHTML = '';
+      state.dbProfiles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} [${p.server} / ${p.database}]`;
+        if (p.id === state.activeProfileId) {
+          opt.selected = true;
+        }
+        dom.loginDbProfileSelect.appendChild(opt);
+      });
+
+      renderProfilesListTable();
+    } catch (err) {
+      console.error(err);
+      dom.loginDbStatusText.textContent = 'Lỗi nạp cấu hình CSDL';
+    }
+  }
+
+  function renderProfilesListTable() {
+    dom.profilesListBody.innerHTML = '';
+    state.dbProfiles.forEach(p => {
+      const tr = document.createElement('tr');
+      const isDefault = p.id === state.activeProfileId;
+      tr.innerHTML = `
+        <td>
+          <b>${p.name}</b>
+          ${isDefault ? '<span class="profile-badge-default" style="margin-left: 6px;">Mặc định</span>' : ''}
+        </td>
+        <td>${p.server}</td>
+        <td>${p.database}</td>
+        <td>${p.makho || '01'} (Q${p.quay || '01'})</td>
+        <td style="text-align: center;">
+          <button class="btn btn-blue btn-sm" data-action="edit-profile" data-id="${p.id}">Sửa</button>
+          ${!isDefault && state.dbProfiles.length > 1 ? `<button class="btn btn-rose btn-sm" data-action="del-profile" data-id="${p.id}">Xóa</button>` : ''}
+        </td>
+      `;
+
+      tr.querySelector('[data-action="edit-profile"]').addEventListener('click', () => {
+        populateProfileForm(p);
+      });
+
+      const delBtn = tr.querySelector('[data-action="del-profile"]');
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          if (confirm(`Xóa cấu hình kết nối [${p.name}]?`)) {
+            await api.deleteDBProfile(p.id);
+            showToast(`Đã xóa cấu hình [${p.name}]`, 'info');
+            await loadAndRenderDBProfiles();
+          }
+        });
+      }
+
+      dom.profilesListBody.appendChild(tr);
+    });
+  }
+
+  function populateProfileForm(p) {
+    dom.profileInputId.value = p.id || '';
+    dom.profileInputName.value = p.name || '';
+    dom.profileInputServer.value = p.server || '.\\sqlexpress';
+    dom.profileInputDb.value = p.database || 'SOFTZ_SHOPHOA';
+    dom.profileInputDriver.value = p.driver || 'ODBC Driver 17 for SQL Server';
+    dom.profileInputUser.value = p.user || 'sa';
+    dom.profileInputPass.value = p.password || '';
+    dom.profileInputMakho.value = p.makho || '01';
+    dom.profileInputQuay.value = p.quay || '01';
+    dom.profileTestResult.textContent = '';
+  }
+
+  async function handleTestConnection() {
+    const profile = getProfileFromForm();
+    dom.profileTestResult.textContent = 'Đang thử kết nối ODBC...';
+    dom.profileTestResult.style.color = 'var(--text-muted)';
+
+    try {
+      const msg = await api.testDBConnection(profile);
+      dom.profileTestResult.textContent = msg;
+      dom.profileTestResult.style.color = 'var(--btn-green)';
+      showToast(msg, 'success');
+    } catch (err) {
+      dom.profileTestResult.textContent = '✗ ' + (err.message || err);
+      dom.profileTestResult.style.color = 'var(--btn-danger)';
+      showToast(`Kết nối thất bại: ${err.message || err}`, 'error');
+    }
+  }
+
+  async function handleSaveProfile() {
+    const profile = getProfileFromForm();
+    if (!profile.name || !profile.server || !profile.database) {
+      showToast('Vui lòng điền đầy đủ Tên, Máy chủ và Database!', 'warning');
+      return;
+    }
+
+    try {
+      await api.saveDBProfile(profile);
+      showToast(`✓ Đã lưu cấu hình [${profile.name}]`, 'success');
+      await loadAndRenderDBProfiles();
+      closeModal(dom.modalDbProfiles);
+    } catch (err) {
+      showToast(`Lỗi khi lưu cấu hình: ${err.message || err}`, 'error');
+    }
+  }
+
+  function getProfileFromForm() {
+    return {
+      id: dom.profileInputId.value || '',
+      name: dom.profileInputName.value.trim(),
+      server: dom.profileInputServer.value.trim(),
+      database: dom.profileInputDb.value.trim(),
+      driver: dom.profileInputDriver.value.trim(),
+      user: dom.profileInputUser.value.trim(),
+      password: dom.profileInputPass.value,
+      makho: dom.profileInputMakho.value.trim() || '01',
+      quay: dom.profileInputQuay.value.trim() || '01'
+    };
+  }
+
+  async function handleLogin() {
+    const username = dom.loginUsername.value.trim();
+    const password = dom.loginPassword.value;
+    const ca = document.querySelector('input[name="login-shift"]:checked').value;
+    const quay = dom.loginQuaySelect.value;
+    const profileId = dom.loginDbProfileSelect.value;
+
+    if (!username) {
+      showToast('Vui lòng nhập tên tài khoản thu ngân!', 'warning');
+      dom.loginUsername.focus();
+      return;
+    }
+
+    dom.btnDoLogin.textContent = 'Đang xác thực và kết nối...';
+    dom.btnDoLogin.disabled = true;
+
+    try {
+      const sess = await api.login(username, password, ca, quay, profileId);
+      state.session = sess;
+      state.isLoggedIn = true;
+
+      // Update POS Header
+      const shiftMap = { '1': 'Ca Sáng (1)', '2': 'Ca Chiều (2)', '3': 'Ca Tối (3)' };
+      dom.sessionShift.textContent = shiftMap[sess.ca] || ('Ca ' + sess.ca);
+      dom.sessionCashier.textContent = `Thu ngân: ${sess.fullname || sess.username}`;
+      dom.sessionStore.textContent = `Kho: ${sess.makho} (${sess.tenkho || 'Kho ' + sess.makho}) • Quầy ${sess.quay}`;
+
+      // Switch View
+      dom.viewLogin.style.display = 'none';
+      dom.viewPos.style.display = 'flex';
+
+      showToast(`✓ Đăng nhập thành công! Chào mừng ${sess.fullname || sess.username}`, 'success');
+
+      // Initialize POS catalog & sale
+      await initPOSSession();
+    } catch (err) {
+      console.error(err);
+      showToast(`Đăng nhập thất bại: ${err.message || err}`, 'error');
+    } finally {
+      dom.btnDoLogin.textContent = '[Enter] ĐĂNG NHẬP VÀO POS';
+      dom.btnDoLogin.disabled = false;
+    }
+  }
+
+  async function handleLogout() {
+    if (confirm('Bạn có chắc muốn đăng xuất khỏi ca làm việc hiện tại?')) {
+      await api.logout();
+      state.isLoggedIn = false;
+      state.currentSale.items = [];
+      dom.viewPos.style.display = 'none';
+      dom.viewLogin.style.display = 'flex';
+      dom.loginPassword.value = '';
+      dom.loginUsername.focus();
+      showToast('Đã đăng xuất khỏi POS', 'info');
+    }
+  }
+
+  // =========================================================================
+  // POS SCREEN RENDERING & LOGIC
+  // =========================================================================
+  async function initPOSSession() {
+    // Categories
+    try {
+      state.categories = await api.getCategories();
+      renderCategories();
+    } catch (e) {
+      console.warn('Categories load error', e);
+    }
+
+    // Catalog products
+    await loadCatalogProducts();
+
+    // Start New Sale
+    await startNewSale();
+  }
+
   function renderCart() {
     const { items, header } = state.currentSale;
     dom.cartItemsBody.innerHTML = '';
@@ -501,8 +831,17 @@
     });
   }
 
+  async function loadCatalogProducts() {
+    try {
+      state.catalogItems = await api.searchProducts('', state.selectedCategory);
+      renderCatalogGrid();
+    } catch (e) {
+      console.warn('Catalog load err', e);
+    }
+  }
+
   // =========================================================================
-  // CART OPERATIONS
+  // CART ACTIONS
   // =========================================================================
   async function addProductToCart(product, qty = 1) {
     if (state.isReturnMode) {
@@ -512,12 +851,11 @@
     const existingIdx = state.currentSale.items.findIndex(i => i.mavt === product.mavt);
 
     if (existingIdx >= 0) {
-      // Tăng số lượng dòng đã có
       state.currentSale.items[existingIdx].soluong += qty;
       state.selectedItemIndex = existingIdx;
       showToast(`Đã tăng [${product.tenvt}] lên SL: ${state.currentSale.items[existingIdx].soluong}`, 'info');
     } else {
-      // Thêm dòng mới
+      const taxRate = product.vat_ra || (product.loaithue === 'T08' ? 8 : (product.loaithue === 'T05' ? 5 : (product.loaithue === 'T00' ? 0 : 10)));
       const newItem = {
         khoact: 'ct-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
         stt: state.currentSale.items.length + 1,
@@ -529,13 +867,13 @@
         dongia_sauck: product.giaban || 0,
         sotien: (product.giaban || 0) * qty,
         tl_ck: 0,
-        tl_ck2: state.customer.mavip ? 5 : 0, // 5% nếu là khách VIP
+        tl_ck2: state.customer.mavip ? 5 : 0,
         tl_ck3: 0,
         tl_ck4: 0,
         tl_ck5: 0,
         chietkhau: 0,
         loaithue: product.loaithue || 'T10',
-        thue_suat: product.vat_ra || 10,
+        thue_suat: taxRate,
         tien_thue: 0,
         tien_thue_cl: 0,
         thanhtien_chua_vat: 0,
@@ -609,7 +947,7 @@
   }
 
   // =========================================================================
-  // SEARCH / BARCODE ENGINE
+  // BARCODE & SEARCH
   // =========================================================================
   let searchDebounceTimer = null;
 
@@ -618,7 +956,6 @@
 
     if (e.key === 'Enter') {
       if (!val) return;
-      // Tìm chính xác mã barcode hoặc mã vật tư
       const results = await api.searchProducts(val, '');
       if (results && results.length > 0) {
         addProductToCart(results[0]);
@@ -654,7 +991,7 @@
     }
 
     dom.searchResultsDropdown.innerHTML = '';
-    state.searchResults.forEach((p, idx) => {
+    state.searchResults.forEach(p => {
       const item = document.createElement('div');
       item.className = 'search-item';
       item.innerHTML = `
@@ -682,7 +1019,7 @@
   }
 
   // =========================================================================
-  // MODALS LOGIC
+  // MODALS CONTROL
   // =========================================================================
   function openModal(modal) {
     modal.classList.add('open');
@@ -690,10 +1027,12 @@
 
   function closeModal(modal) {
     modal.classList.remove('open');
-    dom.barcodeInput.focus();
+    if (state.isLoggedIn) {
+      dom.barcodeInput.focus();
+    }
   }
 
-  // 1. PAYMENT MODAL
+  // 1. Payment Modal
   function openPaymentModal() {
     if (state.currentSale.items.length === 0) {
       showToast('Giỏ hàng chưa có sản phẩm để thanh toán!', 'warning');
@@ -707,9 +1046,7 @@
     dom.qrMemo.textContent = 'BLE-' + state.currentSale.header.sct;
     updatePaymentChange();
 
-    // Reset payment method to Cash (TM)
     selectPaymentMethod('TM');
-
     openModal(dom.modalPayment);
     dom.inputCashGiven.select();
   }
@@ -776,7 +1113,6 @@
       closeModal(dom.modalPayment);
       showToast(`✓ Đã thanh toán thành công hóa đơn [${state.currentSale.header.sct}] - Tổng: ${formatMoney(required)}`, 'success');
 
-      // Khởi tạo ngay hóa đơn mới cho lượt khách kế tiếp
       await startNewSale();
     } catch (err) {
       console.error(err);
@@ -787,7 +1123,7 @@
     }
   }
 
-  // 2. QUANTITY MODAL
+  // 2. Quantity Modal
   function openQtyModal() {
     const idx = state.selectedItemIndex;
     if (idx < 0 || idx >= state.currentSale.items.length) {
@@ -813,7 +1149,7 @@
     }
   }
 
-  // 3. DISCOUNT MODAL
+  // 3. Discount Modal
   function openDiscountModal() {
     openModal(dom.modalDiscount);
     dom.inputDiscountVal.value = state.currentSale.header.tl_ck || '';
@@ -838,7 +1174,7 @@
     showToast(`Đã áp dụng giảm giá đơn hàng: ${val}${type === 'percent' ? '%' : ' đ'}`, 'success');
   }
 
-  // 4. HOLD ORDER (LƯU TẠM BANLE_TAM)
+  // 4. Hold Order
   async function holdCurrentOrder() {
     if (state.currentSale.items.length === 0) {
       showToast('Không thể giữ đơn vì giỏ hàng đang trống!', 'warning');
@@ -856,7 +1192,7 @@
     }
   }
 
-  // 5. LIST DRAFT SALES MODAL
+  // 5. Drafts Modal
   async function openDraftsModal() {
     try {
       const drafts = await api.listDraftSales();
@@ -925,7 +1261,7 @@
     }
   }
 
-  // 6. CUSTOMER SEARCH MODAL
+  // 6. Customer Modal
   function openCustomerModal() {
     openModal(dom.modalCustomer);
     dom.inputSearchCustomer.value = '';
@@ -955,8 +1291,8 @@
       item.className = 'search-item';
       item.innerHTML = `
         <div>
-          <div class="search-item-title">${c.tendt} ${c.mavip ? '<span class="badge" style="background:var(--btn-amber); color:#fff; font-size:10px; padding:2px 4px; border-radius:3px;">VIP</span>' : ''}</div>
-          <div class="search-item-meta">Mã: ${c.madt} • SĐT: ${c.dienthoai || 'Không có'}</div>
+          <div class="search-item-title">${c.tendt} ${c.loai_vip ? '<span class="badge" style="background:var(--btn-amber); color:#fff; font-size:10px; padding:2px 4px; border-radius:3px;">' + c.loai_vip + '</span>' : ''}</div>
+          <div class="search-item-meta">Mã: ${c.madt} • SĐT: ${c.dienthoai || 'Không có'} • Đ/c: ${c.diachi || '---'}</div>
         </div>
         <button class="btn btn-blue btn-sm">Chọn</button>
       `;
@@ -973,19 +1309,34 @@
   function setCustomer(c) {
     state.customer = c;
     state.currentSale.header.madt = c.madt;
-    state.currentSale.header.mavip = c.mavip || '';
+    state.currentSale.header.mavip = c.loai_vip || '';
     dom.customerName.textContent = c.tendt;
     showToast(`Đã chọn khách hàng: ${c.tendt}`, 'info');
     recalculateAndRefresh();
   }
 
   // =========================================================================
-  // KEYBOARD SHORTCUTS ENGINE
+  // KEYBOARD SHORTCUTS
   // =========================================================================
   function handleGlobalKeyDown(e) {
     const anyModalOpen = document.querySelector('.modal-overlay.open');
 
-    // Hotkey: Escape
+    // On Login View
+    if (!state.isLoggedIn) {
+      if (e.key === 'Enter') {
+        if (!anyModalOpen) {
+          handleLogin();
+          e.preventDefault();
+        }
+      }
+      if (e.key === 'Escape' && anyModalOpen) {
+        closeModal(anyModalOpen);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    // On POS View
     if (e.key === 'Escape') {
       if (anyModalOpen) {
         closeModal(anyModalOpen);
@@ -1007,7 +1358,6 @@
       return;
     }
 
-    // Hotkey: Enter in Modals
     if (e.key === 'Enter') {
       if (dom.modalPayment.classList.contains('open')) {
         executePayment();
@@ -1026,7 +1376,6 @@
       }
     }
 
-    // In modals, skip POS global function keys
     if (anyModalOpen) {
       if (e.key === '1' && dom.modalPayment.classList.contains('open') && document.activeElement !== dom.inputCashGiven) {
         selectPaymentMethod('TM');
@@ -1043,39 +1392,32 @@
       return;
     }
 
-    // POS Global Function Keys (Strictly aligned with legacy & MISA conventions)
     switch (e.key) {
       case 'F2':
         e.preventDefault();
         dom.barcodeInput.focus();
         dom.barcodeInput.select();
         break;
-
       case 'F3':
         e.preventDefault();
         openQtyModal();
         break;
-
       case 'F4':
         e.preventDefault();
         openPaymentModal();
         break;
-
       case 'F5':
         e.preventDefault();
         openDiscountModal();
         break;
-
       case 'F6':
         e.preventDefault();
         openCustomerModal();
         break;
-
       case 'F7':
         e.preventDefault();
         holdCurrentOrder();
         break;
-
       case 'F8':
         e.preventDefault();
         state.isReturnMode = !state.isReturnMode;
@@ -1089,28 +1431,23 @@
           showToast('Đã quay lại chế độ Bán hàng bình thường', 'info');
         }
         break;
-
       case 'F9':
         e.preventDefault();
         openDraftsModal();
         break;
-
       case 'F10':
         e.preventDefault();
         showToast('Tra cứu lịch sử hóa đơn bán lẻ [F10]', 'info');
         break;
-
       case 'F11':
         e.preventDefault();
-        showToast(`Đang in lại hóa đơn [${state.currentSale.header.sct}] qua máy in bill...`, 'info');
+        showToast(`Đang in lại hóa đơn [${state.currentSale.header.sct}] qua máy in nhiệt...`, 'info');
         break;
-
       case 'F12':
         e.preventDefault();
         openModal(dom.modalLock);
         dom.inputUnlockPass.focus();
         break;
-
       case 'ArrowUp':
         if (document.activeElement !== dom.barcodeInput) {
           e.preventDefault();
@@ -1120,7 +1457,6 @@
           }
         }
         break;
-
       case 'ArrowDown':
         if (document.activeElement !== dom.barcodeInput) {
           e.preventDefault();
@@ -1130,7 +1466,6 @@
           }
         }
         break;
-
       case 'Delete':
         if (document.activeElement !== dom.barcodeInput && state.selectedItemIndex >= 0) {
           e.preventDefault();
@@ -1141,47 +1476,43 @@
   }
 
   // =========================================================================
-  // INITIALIZATION & EVENT LISTENERS
+  // INITIALIZATION
   // =========================================================================
   async function init() {
-    // Clock
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Session info
-    try {
-      const sess = await api.getSessionInfo();
-      if (sess) {
-        state.session = sess;
-        dom.sessionShift.textContent = sess.ca || 'Ca Sáng';
-        dom.sessionCashier.textContent = 'Thu ngân: ' + (sess.thungan || 'ntd');
-        dom.sessionStore.textContent = `Kho: ${sess.makho} (Quầy ${sess.quay})`;
-      }
-    } catch (e) {
-      console.warn('Session load err', e);
-    }
+    // Load Database Profiles & set default
+    await loadAndRenderDBProfiles();
 
-    // Categories
-    try {
-      state.categories = await api.getCategories();
-      renderCategories();
-    } catch (e) {
-      console.warn('Categories err', e);
-    }
+    // Event Listeners for Login & Profiles
+    dom.btnDoLogin.addEventListener('click', handleLogin);
+    dom.btnDoLogout.addEventListener('click', handleLogout);
 
-    // Catalog products
-    await loadCatalogProducts();
+    dom.btnManageDbProfiles.addEventListener('click', () => {
+      populateProfileForm({
+        id: '',
+        name: 'Chi nhánh mới',
+        server: '.\\sqlexpress',
+        database: 'SOFTZ_SHOPHOA',
+        driver: 'ODBC Driver 17 for SQL Server',
+        user: 'sa',
+        password: '',
+        makho: '01',
+        quay: '01'
+      });
+      openModal(dom.modalDbProfiles);
+    });
 
-    // Start New Sale
-    await startNewSale();
+    dom.btnTestDbConnection.addEventListener('click', handleTestConnection);
+    dom.btnSaveDbProfile.addEventListener('click', handleSaveProfile);
 
-    // Event Listeners
+    // POS Search & Inputs
     dom.barcodeInput.addEventListener('keydown', handleSearchInput);
     dom.barcodeInput.addEventListener('input', handleSearchInput);
-
     dom.catalogFilterInput.addEventListener('input', renderCatalogGrid);
 
-    // Modal close buttons
+    // Modal Close Buttons
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => {
         const modalId = btn.dataset.close;
@@ -1190,7 +1521,7 @@
       });
     });
 
-    // Action bar buttons
+    // POS Footer Action Buttons
     dom.btnChangeQty.addEventListener('click', openQtyModal);
     dom.btnDiscount.addEventListener('click', openDiscountModal);
     dom.btnDiscountTag.addEventListener('click', openDiscountModal);
@@ -1219,7 +1550,7 @@
       dom.inputUnlockPass.focus();
     });
 
-    // Customer
+    // Customer Modal
     dom.btnCustomer.addEventListener('click', openCustomerModal);
     dom.inputSearchCustomer.addEventListener('input', searchCustomers);
     dom.btnChooseWalkin.addEventListener('click', () => {
@@ -1227,7 +1558,7 @@
       closeModal(dom.modalCustomer);
     });
 
-    // Payment modal inputs & quick cash
+    // Payment Modal Inputs
     dom.inputCashGiven.addEventListener('input', updatePaymentChange);
     dom.modalPayment.querySelectorAll('.payment-method-btn').forEach(btn => {
       btn.addEventListener('click', () => selectPaymentMethod(btn.dataset.method));
@@ -1245,7 +1576,7 @@
     });
     dom.btnSubmitPay.addEventListener('click', executePayment);
 
-    // Qty Modal quick steps
+    // Quantity Modal Buttons
     dom.modalQty.querySelectorAll('.quick-qty-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const step = parseFloat(btn.dataset.step) || 0;
@@ -1255,7 +1586,7 @@
     });
     dom.btnSubmitQty.addEventListener('click', submitQtyModal);
 
-    // Discount modal radio toggle
+    // Discount Modal
     dom.modalDiscount.querySelectorAll('input[name="discount-type"]').forEach(r => {
       r.addEventListener('change', () => {
         if (r.value === 'percent') {
@@ -1271,7 +1602,7 @@
     });
     dom.btnSubmitDiscount.addEventListener('click', submitDiscountModal);
 
-    // Unlock button
+    // Lock screen unlock
     dom.btnUnlock.addEventListener('click', () => {
       closeModal(dom.modalLock);
       dom.inputUnlockPass.value = '';
@@ -1281,26 +1612,16 @@
     // Global Key Listener
     window.addEventListener('keydown', handleGlobalKeyDown);
 
-    // Click outside search dropdown to close
+    // Click outside search dropdown
     document.addEventListener('click', (e) => {
       if (!dom.barcodeInput.contains(e.target) && !dom.searchResultsDropdown.contains(e.target)) {
         closeSearchDropdown();
       }
     });
 
-    console.log('✓ ShopHoa POS UI Initialized. Wails Mode:', state.isWails);
+    console.log('✓ ShopHoa POS Initialized. Wails Mode:', state.isWails);
   }
 
-  async function loadCatalogProducts() {
-    try {
-      state.catalogItems = await api.searchProducts('', state.selectedCategory);
-      renderCatalogGrid();
-    } catch (e) {
-      console.warn('Catalog load err', e);
-    }
-  }
-
-  // Start app when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

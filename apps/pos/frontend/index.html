@@ -8,149 +8,311 @@
 </head>
 <body>
 
-  <!-- ==================== HEADER ==================== -->
-  <header class="pos-header">
-    <div class="header-brand">
-      <div class="brand-badge">SHOP HOA POS</div>
-      <div class="session-info">
-        <span class="status-dot"></span>
-        <span id="session-shift">Ca Sáng</span>
-        <span>•</span>
-        <span id="session-cashier">Thu ngân: ntd</span>
-        <span>•</span>
-        <span id="session-store">Kho: 01 (Quầy 01)</span>
-        <span>•</span>
-        <span id="session-clock" style="font-weight: 700; color: var(--color-primary);">00:00:00</span>
-      </div>
-    </div>
-
-    <div class="header-search">
-      <span class="search-hint-tag">[F2]</span>
-      <input type="text" id="barcode-input" class="search-input" autofocus
-        placeholder="Quét mã vạch hoặc gõ tên sản phẩm... [Enter để thêm]">
-      <div id="search-results-dropdown" class="search-results"></div>
-    </div>
-
-    <div class="header-actions">
-      <button id="btn-search-order" class="btn btn-indigo" title="Tra cứu hóa đơn cũ">[F10] Tìm đơn</button>
-      <button id="btn-reprint" class="btn btn-slate" title="In lại hóa đơn vừa thanh toán">[F11] In lại</button>
-      <button id="btn-lock" class="btn btn-dark" title="Khóa màn hình làm việc">[F12] Khóa máy</button>
-    </div>
-  </header>
-
-  <!-- ==================== MAIN CONTENT ==================== -->
-  <main class="pos-main">
-    
-    <!-- LEFT: CART & ORDER SUMMARY -->
-    <section class="cart-panel">
-      <!-- Order Subbar -->
-      <div class="cart-subbar">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span>Số HĐ:</span>
-          <span id="order-sct" class="cart-bill-badge">Đang tải...</span>
-          <span id="order-time" style="color: var(--text-muted); font-size: 11px;"></span>
-        </div>
-        <div class="cart-customer-box">
-          <span style="color: var(--text-muted);">Khách hàng:</span>
-          <button id="btn-customer" class="btn btn-sky btn-sm" title="Thay đổi thông tin khách hàng">
-            [F6] <span id="customer-name">Khách lẻ</span>
-          </button>
-        </div>
+  <!-- =========================================================================
+       VIEW 1: MÀN HÌNH ĐĂNG NHẬP & CHỌN KẾT NỐI CSDL
+       ========================================================================= -->
+  <div id="view-login" class="view-container">
+    <div class="login-card">
+      <div class="login-card-header">
+        <div class="login-brand-title">SHOP HOA POS</div>
+        <div class="login-brand-subtitle">Hệ thống Quản lý Bán lẻ Hoa tươi & Quà tặng</div>
       </div>
 
-      <!-- Items Table -->
-      <div class="cart-table-wrapper">
-        <table class="cart-table">
-          <thead>
-            <tr>
-              <th style="width: 40px; text-align: center;">STT</th>
-              <th>Sản phẩm</th>
-              <th style="width: 65px; text-align: center;">ĐVT</th>
-              <th style="width: 80px; text-align: center;">SL</th>
-              <th style="width: 100px; text-align: right;">Đơn giá</th>
-              <th style="width: 60px; text-align: center;">CK%</th>
-              <th style="width: 110px; text-align: right;">Thành tiền</th>
-              <th style="width: 55px; text-align: center;">Xóa</th>
-            </tr>
-          </thead>
-          <tbody id="cart-items-body">
-            <!-- Dynamic Cart Rows -->
-          </tbody>
-        </table>
-
-        <!-- Empty Cart Notice -->
-        <div id="cart-empty" class="cart-empty">
-          <div class="cart-empty-title">Giỏ hàng đang trống</div>
-          <div class="cart-empty-desc">Quét mã vạch sản phẩm [F2] hoặc chọn nhanh từ danh mục hoa bên phải</div>
-        </div>
-      </div>
-
-      <!-- Cart Summary Footer -->
-      <div class="cart-summary">
-        <div class="summary-row">
-          <span>Tổng số lượng: <b id="total-qty" style="color: var(--text-main);">0 món</b></span>
-          <span>Tiền hàng (Tạm tính): <b id="subtotal-val" style="color: var(--text-main);">0 đ</b></span>
-        </div>
-        <div class="summary-row">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span>Chiết khấu đơn:</span>
-            <button id="btn-discount-tag" class="btn btn-amber btn-sm">[F5] Đổi giảm giá</button>
-            <b id="discount-val" style="color: var(--btn-amber);">- 0 đ</b>
+      <div class="login-card-body">
+        <!-- DB Profile Selection -->
+        <div class="login-field-row">
+          <label class="form-label">Máy chủ & CSDL kết nối:</label>
+          <div class="login-db-selector-row">
+            <select id="login-db-profile-select" class="login-select">
+              <!-- Dynamically populated profiles -->
+            </select>
+            <button type="button" id="btn-manage-db-profiles" class="btn btn-indigo" title="Cấu hình thêm/sửa kết nối CSDL">
+              Quản lý kết nối
+            </button>
           </div>
-          <span>Thuế VAT: <b id="tax-val" style="color: var(--text-secondary);">0 đ</b></span>
         </div>
-        <div class="summary-highlight-banner">
-          <div class="highlight-label">TỔNG THANH TOÁN:</div>
-          <div class="highlight-value" id="grand-total-val">0 <span style="font-size: 16px; font-weight: normal;">đ</span></div>
+
+        <!-- Username -->
+        <div class="login-field-row">
+          <label class="form-label">Tài khoản thu ngân (SYS_USER):</label>
+          <input type="text" id="login-username" class="form-input" placeholder="Ví dụ: ntd hoặc ADMIN" value="ntd" autofocus>
+        </div>
+
+        <!-- Password -->
+        <div class="login-field-row">
+          <label class="form-label">Mật khẩu:</label>
+          <input type="password" id="login-password" class="form-input" placeholder="Nhập mật khẩu (123 hoặc để trống)">
+        </div>
+
+        <!-- Shift (Ca làm việc) -->
+        <div class="login-field-row">
+          <label class="form-label">Ca làm việc:</label>
+          <div class="shift-radio-group">
+            <label class="shift-radio-label">
+              <input type="radio" name="login-shift" value="1" checked> Ca 1 (Sáng)
+            </label>
+            <label class="shift-radio-label">
+              <input type="radio" name="login-shift" value="2"> Ca 2 (Chiều)
+            </label>
+            <label class="shift-radio-label">
+              <input type="radio" name="login-shift" value="3"> Ca 3 (Tối)
+            </label>
+          </div>
+        </div>
+
+        <!-- Counter (Quầy bán lẻ) -->
+        <div class="login-field-row">
+          <label class="form-label">Quầy thu ngân:</label>
+          <div style="display: flex; gap: 8px;">
+            <select id="login-quay-select" class="login-select" style="max-width: 130px;">
+              <option value="01" selected>Quầy 01</option>
+              <option value="02">Quầy 02</option>
+              <option value="03">Quầy 03</option>
+            </select>
+            <div id="login-db-status-text" style="flex: 1; font-size: 11px; color: var(--text-muted); display: flex; align-items: center;">
+              Sẵn sàng kết nối SQL Server
+            </div>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- RIGHT: PRODUCT CATALOG GRID -->
-    <section class="catalog-panel">
-      <!-- Category Tabs -->
-      <div id="catalog-tabs" class="catalog-tabs">
-        <button class="catalog-tab active" data-cat="">Tất cả</button>
-        <!-- Categories injected dynamically -->
+      <div class="login-card-footer">
+        <button id="btn-do-login" class="btn btn-payment btn-lg" style="width: 100%; justify-content: center;">
+          [Enter] ĐĂNG NHẬP VÀO POS
+        </button>
+        <div class="login-status-badge">
+          <span class="status-dot"></span>
+          <span>ODBC Shared Memory / LPC • Database: SOFTZ_SHOPHOA</span>
+        </div>
       </div>
-
-      <!-- Fast Filter Input -->
-      <div class="catalog-filter-bar">
-        <input type="text" id="catalog-filter-input" class="catalog-filter-input"
-          placeholder="Lọc nhanh danh mục hoa, bình, thiệp, phụ liệu...">
-      </div>
-
-      <!-- Product Cards Grid -->
-      <div id="catalog-grid" class="catalog-grid">
-        <!-- Dynamic Cards -->
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ==================== FOOTER (ACTION BAR) ==================== -->
-  <footer class="pos-footer">
-    <div class="footer-left-group">
-      <button id="btn-change-qty" class="btn btn-blue" title="Thay đổi số lượng dòng đang chọn">[F3] Đổi SL</button>
-      <button id="btn-discount" class="btn btn-amber" title="Chiết khấu hoặc giảm giá hóa đơn">[F5] Giảm giá</button>
-      <button id="btn-hold-order" class="btn btn-indigo" title="Lưu tạm đơn hàng để phục vụ khách khác">[F7] Giữ đơn</button>
-      <button id="btn-pending-drafts" class="btn btn-teal" title="Danh sách các hóa đơn tạm đang treo">
-        [F9] Đơn tạm (<span id="draft-count">0</span>)
-      </button>
-      <button id="btn-return-mode" class="btn btn-rose" title="Chuyển chế độ khách trả lại hàng">[F8] Trả hàng</button>
-      <button id="btn-cancel-order" class="btn btn-danger" title="Hủy bỏ đơn hàng hiện tại">[Esc] Hủy đơn</button>
     </div>
+  </div>
 
-    <div class="footer-right-group">
-      <button id="btn-checkout" class="btn btn-payment btn-big-payment">
-        [F4] THANH TOÁN (Enter)
-      </button>
-    </div>
-  </footer>
+  <!-- =========================================================================
+       VIEW 2: MÀN HÌNH BÁN HÀNG POS CHÍNH (Sau khi đăng nhập)
+       ========================================================================= -->
+  <div id="view-pos" class="view-container" style="display: none;">
+    <!-- ==================== HEADER ==================== -->
+    <header class="pos-header">
+      <div class="header-brand">
+        <div class="brand-badge">SHOP HOA POS</div>
+        <div class="session-info">
+          <span class="status-dot"></span>
+          <span id="session-shift">Ca Sáng</span>
+          <span>•</span>
+          <span id="session-cashier">Thu ngân: ntd</span>
+          <span>•</span>
+          <span id="session-store">Kho: 01 (Quầy 01)</span>
+          <span>•</span>
+          <span id="session-clock" style="font-weight: 700; color: var(--color-primary);">00:00:00</span>
+        </div>
+      </div>
+
+      <div class="header-search">
+        <span class="search-hint-tag">[F2]</span>
+        <input type="text" id="barcode-input" class="search-input"
+          placeholder="Quét mã vạch hoặc gõ tên sản phẩm... [Enter để thêm]">
+        <div id="search-results-dropdown" class="search-results"></div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-search-order" class="btn btn-indigo" title="Tra cứu hóa đơn cũ">[F10] Tìm đơn</button>
+        <button id="btn-reprint" class="btn btn-slate" title="In lại hóa đơn vừa thanh toán">[F11] In lại</button>
+        <button id="btn-lock" class="btn btn-dark" title="Khóa màn hình làm việc">[F12] Khóa máy</button>
+        <button id="btn-do-logout" class="btn btn-rose btn-sm" title="Đăng xuất khỏi ca thu ngân">Đăng xuất</button>
+      </div>
+    </header>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="pos-main">
+      <!-- LEFT: CART & ORDER SUMMARY -->
+      <section class="cart-panel">
+        <!-- Order Subbar -->
+        <div class="cart-subbar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span>Số HĐ:</span>
+            <span id="order-sct" class="cart-bill-badge">Đang tải...</span>
+            <span id="order-time" style="color: var(--text-muted); font-size: 11px;"></span>
+          </div>
+          <div class="cart-customer-box">
+            <span style="color: var(--text-muted);">Khách hàng:</span>
+            <button id="btn-customer" class="btn btn-sky btn-sm" title="Thay đổi thông tin khách hàng">
+              [F6] <span id="customer-name">Khách lẻ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="cart-table-wrapper">
+          <table class="cart-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">STT</th>
+                <th>Sản phẩm</th>
+                <th style="width: 65px; text-align: center;">ĐVT</th>
+                <th style="width: 80px; text-align: center;">SL</th>
+                <th style="width: 100px; text-align: right;">Đơn giá</th>
+                <th style="width: 60px; text-align: center;">CK%</th>
+                <th style="width: 110px; text-align: right;">Thành tiền</th>
+                <th style="width: 55px; text-align: center;">Xóa</th>
+              </tr>
+            </thead>
+            <tbody id="cart-items-body">
+              <!-- Dynamic Cart Rows -->
+            </tbody>
+          </table>
+
+          <!-- Empty Cart Notice -->
+          <div id="cart-empty" class="cart-empty">
+            <div class="cart-empty-title">Giỏ hàng đang trống</div>
+            <div class="cart-empty-desc">Quét mã vạch sản phẩm [F2] hoặc chọn nhanh từ danh mục hoa bên phải</div>
+          </div>
+        </div>
+
+        <!-- Cart Summary Footer -->
+        <div class="cart-summary">
+          <div class="summary-row">
+            <span>Tổng số lượng: <b id="total-qty" style="color: var(--text-main);">0 món</b></span>
+            <span>Tiền hàng (Tạm tính): <b id="subtotal-val" style="color: var(--text-main);">0 đ</b></span>
+          </div>
+          <div class="summary-row">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>Chiết khấu đơn:</span>
+              <button id="btn-discount-tag" class="btn btn-amber btn-sm">[F5] Đổi giảm giá</button>
+              <b id="discount-val" style="color: var(--btn-amber);">- 0 đ</b>
+            </div>
+            <span>Thuế VAT: <b id="tax-val" style="color: var(--text-secondary);">0 đ</b></span>
+          </div>
+          <div class="summary-highlight-banner">
+            <div class="highlight-label">TỔNG THANH TOÁN:</div>
+            <div class="highlight-value" id="grand-total-val">0 <span style="font-size: 16px; font-weight: normal;">đ</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: PRODUCT CATALOG GRID -->
+      <section class="catalog-panel">
+        <!-- Category Tabs -->
+        <div id="catalog-tabs" class="catalog-tabs">
+          <button class="catalog-tab active" data-cat="">Tất cả</button>
+          <!-- Categories injected dynamically -->
+        </div>
+
+        <!-- Fast Filter Input -->
+        <div class="catalog-filter-bar">
+          <input type="text" id="catalog-filter-input" class="catalog-filter-input"
+            placeholder="Lọc nhanh danh mục hoa, bình, thiệp, phụ liệu...">
+        </div>
+
+        <!-- Product Cards Grid -->
+        <div id="catalog-grid" class="catalog-grid">
+          <!-- Dynamic Cards -->
+        </div>
+      </section>
+    </main>
+
+    <!-- ==================== FOOTER (ACTION BAR) ==================== -->
+    <footer class="pos-footer">
+      <div class="footer-left-group">
+        <button id="btn-change-qty" class="btn btn-blue" title="Thay đổi số lượng dòng đang chọn">[F3] Đổi SL</button>
+        <button id="btn-discount" class="btn btn-amber" title="Chiết khấu hoặc giảm giá hóa đơn">[F5] Giảm giá</button>
+        <button id="btn-hold-order" class="btn btn-indigo" title="Lưu tạm đơn hàng để phục vụ khách khác">[F7] Giữ đơn</button>
+        <button id="btn-pending-drafts" class="btn btn-teal" title="Danh sách các hóa đơn tạm đang treo">
+          [F9] Đơn tạm (<span id="draft-count">0</span>)
+        </button>
+        <button id="btn-return-mode" class="btn btn-rose" title="Chuyển chế độ khách trả lại hàng">[F8] Trả hàng</button>
+        <button id="btn-cancel-order" class="btn btn-danger" title="Hủy bỏ đơn hàng hiện tại">[Esc] Hủy đơn</button>
+      </div>
+
+      <div class="footer-right-group">
+        <button id="btn-checkout" class="btn btn-payment btn-big-payment">
+          [F4] THANH TOÁN (Enter)
+        </button>
+      </div>
+    </footer>
+  </div>
 
   <!-- ==================== MODALS ==================== -->
 
-  <!-- 1. PAYMENT MODAL -->
+  <!-- MODAL: QUẢN LÝ KẾT NỐI CƠ SỞ DỮ LIỆU (DATABASE PROFILES) -->
+  <div id="modal-db-profiles" class="modal-overlay">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <div class="modal-title">QUẢN LÝ KẾT NỐI CƠ SỞ DỮ LIỆU SQL SERVER</div>
+        <button class="modal-close-btn" data-close="modal-db-profiles">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Danh sách cấu hình hiện có -->
+        <div style="font-weight: 700; font-size: 13px; color: var(--text-main); margin-bottom: 4px;">Danh sách kết nối đã lưu:</div>
+        <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 6px;">
+          <table class="profiles-table">
+            <thead>
+              <tr>
+                <th>Tên cấu hình</th>
+                <th>Máy chủ</th>
+                <th>Database</th>
+                <th>Kho</th>
+                <th style="text-align: center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="profiles-list-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Form Thêm / Chỉnh sửa cấu hình -->
+        <div style="font-weight: 700; font-size: 13px; color: var(--text-main); margin-top: 10px; border-top: 1px dashed var(--border-light); padding-top: 10px;">
+          Thông tin chi tiết kết nối:
+        </div>
+        <input type="hidden" id="profile-input-id">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">Tên cấu hình (Gợi nhớ):</label>
+            <input type="text" id="profile-input-name" class="form-input" style="font-size: 13px; padding: 7px 10px;" placeholder="Ví dụ: Cửa hàng Q2">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Máy chủ SQL Server:</label>
+            <input type="text" id="profile-input-server" class="form-input" style="font-size: 13px; padding: 7px 10px;" placeholder="Ví dụ: .\sqlexpress">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tên Database:</label>
+            <input type="text" id="profile-input-db" class="form-input" style="font-size: 13px; padding: 7px 10px;" placeholder="Ví dụ: SOFTZ_SHOPHOA">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ODBC Driver:</label>
+            <input type="text" id="profile-input-driver" class="form-input" style="font-size: 13px; padding: 7px 10px;" value="ODBC Driver 17 for SQL Server">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tài khoản CSDL (User):</label>
+            <input type="text" id="profile-input-user" class="form-input" style="font-size: 13px; padding: 7px 10px;" placeholder="sa">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mật khẩu CSDL (Password):</label>
+            <input type="password" id="profile-input-pass" class="form-input" style="font-size: 13px; padding: 7px 10px;" placeholder="123@456">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mã Kho bán lẻ (MAKHO):</label>
+            <input type="text" id="profile-input-makho" class="form-input" style="font-size: 13px; padding: 7px 10px;" placeholder="01" value="01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mã Quầy thu ngân (QUAY):</label>
+            <input type="text" id="profile-input-quay" class="form-input" style="font-size: 13px; padding: 7px 10px;" placeholder="01" value="01">
+          </div>
+        </div>
+
+        <div id="profile-test-result" style="font-size: 12px; font-weight: 600; min-height: 20px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-test-db-connection" class="btn btn-amber">Kiểm tra kết nối</button>
+        <button type="button" id="btn-save-db-profile" class="btn btn-payment">Lưu cấu hình</button>
+        <button type="button" class="btn btn-slate" data-close="modal-db-profiles">[Esc] Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PAYMENT (THANH TOÁN) -->
   <div id="modal-payment" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
@@ -210,7 +372,7 @@
     </div>
   </div>
 
-  <!-- 2. QUANTITY MODAL -->
+  <!-- MODAL: QUANTITY -->
   <div id="modal-qty" class="modal-overlay">
     <div class="modal-box" style="max-width: 420px;">
       <div class="modal-header">
@@ -237,7 +399,7 @@
     </div>
   </div>
 
-  <!-- 3. DISCOUNT MODAL -->
+  <!-- MODAL: DISCOUNT -->
   <div id="modal-discount" class="modal-overlay">
     <div class="modal-box" style="max-width: 440px;">
       <div class="modal-header">
@@ -268,7 +430,7 @@
     </div>
   </div>
 
-  <!-- 4. DRAFT SALES MODAL -->
+  <!-- MODAL: DRAFT SALES -->
   <div id="modal-drafts" class="modal-overlay">
     <div class="modal-box" style="max-width: 650px;">
       <div class="modal-header">
@@ -298,7 +460,7 @@
     </div>
   </div>
 
-  <!-- 5. CUSTOMER MODAL -->
+  <!-- MODAL: CUSTOMER -->
   <div id="modal-customer" class="modal-overlay">
     <div class="modal-box" style="max-width: 580px;">
       <div class="modal-header">
@@ -318,7 +480,7 @@
     </div>
   </div>
 
-  <!-- 6. LOCK MODAL -->
+  <!-- MODAL: LOCK SCREEN -->
   <div id="modal-lock" class="modal-overlay">
     <div class="modal-box" style="max-width: 380px; text-align: center;">
       <div class="modal-header" style="background-color: var(--btn-dark);">
@@ -334,7 +496,7 @@
     </div>
   </div>
 
-  <!-- Toast Notifications -->
+  <!-- Toast Notifications Container -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Application Logic -->

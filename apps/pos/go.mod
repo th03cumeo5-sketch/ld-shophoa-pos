@@ -3,6 +3,7 @@ module shophoa/pos
 go 1.27.0
 
 require (
+	github.com/alexbrainman/odbc v0.0.0-20250601004241-49e6b2bc0cf0
 	github.com/google/uuid v1.6.0
 	github.com/wailsapp/wails/v2 v2.16.0
 )
