@@ -102,3 +102,24 @@ func (s *SaleService) CompletePayment(ctx context.Context, header *models.BanleT
 
 	return nil
 }
+
+// RecalculateSale tính toán lại chiết khấu, thuế và tổng tiền trên bộ nhớ mà không ghi DB
+func (s *SaleService) RecalculateSale(header *models.BanleTam, items []models.BanleTamCT) {
+	for i := range items {
+		item := &items[i]
+		s.discountServ.CalculateLineItemDiscount(item, 50.0)
+		s.taxServ.CalculateTaxForLine(item)
+	}
+	s.discountServ.CalculateHeaderDiscount(header)
+	s.taxServ.CalculateTotals(header, items)
+}
+
+// GetDraftSale lấy chi tiết đơn hàng tạm
+func (s *SaleService) GetDraftSale(ctx context.Context, khoa uuid.UUID) (*models.SaleDTO, error) {
+	return s.saleRepo.GetDraftSale(ctx, khoa)
+}
+
+// DeleteDraftSale xóa đơn hàng tạm
+func (s *SaleService) DeleteDraftSale(ctx context.Context, khoa uuid.UUID) error {
+	return s.saleRepo.DeleteDraftSale(ctx, khoa)
+}

@@ -31,3 +31,10 @@ type ProductSearchResult struct {
 	VatRa    float64 `json:"vat_ra"`
 	TonKho   float64 `json:"tonkho"` // Tồn kho tức thời (nếu có)
 }
+
+// Category đại diện cho nhóm hàng trong DM_NHOM
+type Category struct {
+	MaNhom  string `json:"manhom"`
+	TenNhom string `json:"tennhom"`
+	Count   int    `json:"count"`
+}

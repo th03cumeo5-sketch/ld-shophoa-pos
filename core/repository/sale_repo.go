@@ -242,3 +242,94 @@ func (r *SaleRepository) ListDraftSales(ctx context.Context, makho, quay string)
 	}
 	return list, nil
 }
+
+// GetDraftSale lấy chi tiết một đơn tạm từ BANLE_TAM & BANLE_TAM_CT
+func (r *SaleRepository) GetDraftSale(ctx context.Context, khoa uuid.UUID) (*models.SaleDTO, error) {
+	queryHeader := `
+		SELECT KHOA, ISNULL(LCT, 'BLE'), NGAY, ISNULL(SCT, ''), ISNULL(LOC, '01'),
+		       ISNULL(MAKHO, '01'), ISNULL(QUAY, '01'), ISNULL(CA, '1'), ISNULL(THUNGAN, ''),
+		       ISNULL(MADT, ''), ISNULL(MAVIP, ''), ISNULL(SOLUONG, 0), ISNULL(SOTIEN, 0),
+		       ISNULL(CHIETKHAU_MH, 0), ISNULL(TL_CK, 0), ISNULL(CHIETKHAU, 0),
+		       ISNULL(THANHTIEN_CHUA_VAT, 0), ISNULL(TIEN_THUE, 0), ISNULL(TIEN_THUE_CL, 0),
+		       ISNULL(THANHTOAN, 0), ISNULL(PTTT, 'TM'), ISNULL(TTOAN1, 0), ISNULL(TTOAN2, 0),
+		       ISNULL(CHUATHOI, 0), ISNULL(DGIAI, '')
+		FROM BANLE_TAM
+		WHERE KHOA = ?
+	`
+	var h models.BanleTam
+	var khoaStr, ngayStr string
+	err := r.db.QueryRowContext(ctx, queryHeader, khoa.String()).Scan(
+		&khoaStr, &h.LCT, &ngayStr, &h.SCT, &h.LOC,
+		&h.MaKho, &h.Quay, &h.Ca, &h.ThuNgan,
+		&h.MaDT, &h.MaVIP, &h.SoLuong, &h.SoTien,
+		&h.ChietKhauMH, &h.TL_CK, &h.ChietKhau,
+		&h.ThanhTienChuaVAT, &h.TienThue, &h.TienThueCL,
+		&h.ThanhToan, &h.PTTT, &h.TToan1, &h.TToan2,
+		&h.ChuaThoi, &h.DGIAI,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get BANLE_TAM %s: %w", khoa, err)
+	}
+	h.Khoa, _ = uuid.Parse(khoaStr)
+	h.Ngay, _ = time.Parse("2006-01-02 15:04:05", ngayStr)
+
+	queryItems := `
+		SELECT KHOACT, KHOA, STT, ISNULL(MAVT, ''), ISNULL(TENVT, ''), ISNULL(DVT, ''),
+		       ISNULL(SOLUONG, 1), ISNULL(DONGIA, 0), ISNULL(DONGIA_SAUCK, 0),
+		       ISNULL(SOTIEN, 0), ISNULL(TL_CK, 0), ISNULL(TL_CK2, 0), ISNULL(TL_CK3, 0),
+		       ISNULL(TL_CK4, 0), ISNULL(TL_CK5, 0), ISNULL(CHIETKHAU, 0),
+		       ISNULL(LOAITHUE, 'T10'), ISNULL(THUE_SUAT, 10), ISNULL(TIEN_THUE, 0),
+		       ISNULL(TIEN_THUE_CL, 0), ISNULL(THANHTIEN_CHUA_VAT, 0), ISNULL(THANHTOAN, 0),
+		       ISNULL(GHICHU, '')
+		FROM BANLE_TAM_CT
+		WHERE KHOA = ?
+		ORDER BY STT
+	`
+	rows, err := r.db.QueryContext(ctx, queryItems, khoa.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to query BANLE_TAM_CT: %w", err)
+	}
+	defer rows.Close()
+
+	var items []models.BanleTamCT
+	for rows.Next() {
+		var it models.BanleTamCT
+		var kctStr, kStr string
+		err := rows.Scan(
+			&kctStr, &kStr, &it.STT, &it.MaVT, &it.TenVT, &it.DVT,
+			&it.SoLuong, &it.DonGia, &it.DonGiaSauCK,
+			&it.SoTien, &it.TL_CK, &it.TL_CK2, &it.TL_CK3,
+			&it.TL_CK4, &it.TL_CK5, &it.ChietKhau,
+			&it.LoaiThue, &it.ThueSuat, &it.TienThue,
+			&it.TienThueCL, &it.ThanhTienChuaVAT, &it.ThanhToan,
+			&it.GhiChu,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan BANLE_TAM_CT: %w", err)
+		}
+		it.KhoaCT, _ = uuid.Parse(kctStr)
+		it.Khoa, _ = uuid.Parse(kStr)
+		items = append(items, it)
+	}
+
+	return &models.SaleDTO{Header: h, Items: items}, nil
+}
+
+// DeleteDraftSale xóa bỏ một đơn tạm khỏi BANLE_TAM & BANLE_TAM_CT
+func (r *SaleRepository) DeleteDraftSale(ctx context.Context, khoa uuid.UUID) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	delCT := "DELETE FROM BANLE_TAM_CT WHERE KHOA = ?"
+	if _, err := tx.ExecContext(ctx, delCT, khoa.String()); err != nil {
+		return err
+	}
+	delHeader := "DELETE FROM BANLE_TAM WHERE KHOA = ?"
+	if _, err := tx.ExecContext(ctx, delHeader, khoa.String()); err != nil {
+		return err
+	}
+	return tx.Commit()
+}

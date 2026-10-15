@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopHoa POS - Màn hình Bán hàng Chuyên nghiệp</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="pos-header">
+    <div class="header-brand">
+      <div class="brand-badge">SHOP HOA POS</div>
+      <div class="session-info">
+        <span class="status-dot"></span>
+        <span id="session-shift">Ca Sáng</span>
+        <span>•</span>
+        <span id="session-cashier">Thu ngân: ntd</span>
+        <span>•</span>
+        <span id="session-store">Kho: 01 (Quầy 01)</span>
+        <span>•</span>
+        <span id="session-clock" style="font-weight: 700; color: var(--color-primary);">00:00:00</span>
+      </div>
+    </div>
+
+    <div class="header-search">
+      <span class="search-hint-tag">[F2]</span>
+      <input type="text" id="barcode-input" class="search-input" autofocus
+        placeholder="Quét mã vạch hoặc gõ tên sản phẩm... [Enter để thêm]">
+      <div id="search-results-dropdown" class="search-results"></div>
+    </div>
+
+    <div class="header-actions">
+      <button id="btn-search-order" class="btn btn-indigo" title="Tra cứu hóa đơn cũ">[F10] Tìm đơn</button>
+      <button id="btn-reprint" class="btn btn-slate" title="In lại hóa đơn vừa thanh toán">[F11] In lại</button>
+      <button id="btn-lock" class="btn btn-dark" title="Khóa màn hình làm việc">[F12] Khóa máy</button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="pos-main">
+    
+    <!-- LEFT: CART & ORDER SUMMARY -->
+    <section class="cart-panel">
+      <!-- Order Subbar -->
+      <div class="cart-subbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span>Số HĐ:</span>
+          <span id="order-sct" class="cart-bill-badge">Đang tải...</span>
+          <span id="order-time" style="color: var(--text-muted); font-size: 11px;"></span>
+        </div>
+        <div class="cart-customer-box">
+          <span style="color: var(--text-muted);">Khách hàng:</span>
+          <button id="btn-customer" class="btn btn-sky btn-sm" title="Thay đổi thông tin khách hàng">
+            [F6] <span id="customer-name">Khách lẻ</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <div class="cart-table-wrapper">
+        <table class="cart-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">STT</th>
+              <th>Sản phẩm</th>
+              <th style="width: 65px; text-align: center;">ĐVT</th>
+              <th style="width: 80px; text-align: center;">SL</th>
+              <th style="width: 100px; text-align: right;">Đơn giá</th>
+              <th style="width: 60px; text-align: center;">CK%</th>
+              <th style="width: 110px; text-align: right;">Thành tiền</th>
+              <th style="width: 55px; text-align: center;">Xóa</th>
+            </tr>
+          </thead>
+          <tbody id="cart-items-body">
+            <!-- Dynamic Cart Rows -->
+          </tbody>
+        </table>
+
+        <!-- Empty Cart Notice -->
+        <div id="cart-empty" class="cart-empty">
+          <div class="cart-empty-title">Giỏ hàng đang trống</div>
+          <div class="cart-empty-desc">Quét mã vạch sản phẩm [F2] hoặc chọn nhanh từ danh mục hoa bên phải</div>
+        </div>
+      </div>
+
+      <!-- Cart Summary Footer -->
+      <div class="cart-summary">
+        <div class="summary-row">
+          <span>Tổng số lượng: <b id="total-qty" style="color: var(--text-main);">0 món</b></span>
+          <span>Tiền hàng (Tạm tính): <b id="subtotal-val" style="color: var(--text-main);">0 đ</b></span>
+        </div>
+        <div class="summary-row">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>Chiết khấu đơn:</span>
+            <button id="btn-discount-tag" class="btn btn-amber btn-sm">[F5] Đổi giảm giá</button>
+            <b id="discount-val" style="color: var(--btn-amber);">- 0 đ</b>
+          </div>
+          <span>Thuế VAT: <b id="tax-val" style="color: var(--text-secondary);">0 đ</b></span>
+        </div>
+        <div class="summary-highlight-banner">
+          <div class="highlight-label">TỔNG THANH TOÁN:</div>
+          <div class="highlight-value" id="grand-total-val">0 <span style="font-size: 16px; font-weight: normal;">đ</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: PRODUCT CATALOG GRID -->
+    <section class="catalog-panel">
+      <!-- Category Tabs -->
+      <div id="catalog-tabs" class="catalog-tabs">
+        <button class="catalog-tab active" data-cat="">Tất cả</button>
+        <!-- Categories injected dynamically -->
+      </div>
+
+      <!-- Fast Filter Input -->
+      <div class="catalog-filter-bar">
+        <input type="text" id="catalog-filter-input" class="catalog-filter-input"
+          placeholder="Lọc nhanh danh mục hoa, bình, thiệp, phụ liệu...">
+      </div>
+
+      <!-- Product Cards Grid -->
+      <div id="catalog-grid" class="catalog-grid">
+        <!-- Dynamic Cards -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== FOOTER (ACTION BAR) ==================== -->
+  <footer class="pos-footer">
+    <div class="footer-left-group">
+      <button id="btn-change-qty" class="btn btn-blue" title="Thay đổi số lượng dòng đang chọn">[F3] Đổi SL</button>
+      <button id="btn-discount" class="btn btn-amber" title="Chiết khấu hoặc giảm giá hóa đơn">[F5] Giảm giá</button>
+      <button id="btn-hold-order" class="btn btn-indigo" title="Lưu tạm đơn hàng để phục vụ khách khác">[F7] Giữ đơn</button>
+      <button id="btn-pending-drafts" class="btn btn-teal" title="Danh sách các hóa đơn tạm đang treo">
+        [F9] Đơn tạm (<span id="draft-count">0</span>)
+      </button>
+      <button id="btn-return-mode" class="btn btn-rose" title="Chuyển chế độ khách trả lại hàng">[F8] Trả hàng</button>
+      <button id="btn-cancel-order" class="btn btn-danger" title="Hủy bỏ đơn hàng hiện tại">[Esc] Hủy đơn</button>
+    </div>
+
+    <div class="footer-right-group">
+      <button id="btn-checkout" class="btn btn-payment btn-big-payment">
+        [F4] THANH TOÁN (Enter)
+      </button>
+    </div>
+  </footer>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. PAYMENT MODAL -->
+  <div id="modal-payment" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">THANH TOÁN HÓA ĐƠN [<span id="modal-pay-sct">...</span>]</div>
+        <button class="modal-close-btn" data-close="modal-payment">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="payment-total-box">
+          <span class="payment-total-label">KHÁCH CẦN TRẢ:</span>
+          <span id="modal-pay-total" class="payment-total-value">0 đ</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Hình thức thanh toán:</label>
+          <div class="payment-methods-grid">
+            <button type="button" class="payment-method-btn active" data-method="TM">[1] Tiền mặt</button>
+            <button type="button" class="payment-method-btn" data-method="CK">[2] Chuyển khoản QR</button>
+            <button type="button" class="payment-method-btn" data-method="THE">[3] Thẻ ngân hàng</button>
+          </div>
+        </div>
+
+        <!-- Cash Section -->
+        <div id="section-cash" class="form-group">
+          <label class="form-label">Tiền khách đưa (VNĐ):</label>
+          <input type="text" id="input-cash-given" class="form-input" placeholder="0" autofocus>
+          <div class="quick-cash-grid">
+            <button type="button" class="btn btn-outline btn-sm quick-cash-btn" data-amt="exact">Đúng tiền</button>
+            <button type="button" class="btn btn-outline btn-sm quick-cash-btn" data-amt="50000">50,000</button>
+            <button type="button" class="btn btn-outline btn-sm quick-cash-btn" data-amt="100000">100,000</button>
+            <button type="button" class="btn btn-outline btn-sm quick-cash-btn" data-amt="200000">200,000</button>
+            <button type="button" class="btn btn-outline btn-sm quick-cash-btn" data-amt="500000">500,000</button>
+            <button type="button" class="btn btn-outline btn-sm quick-cash-btn" data-amt="1000000">1,000,000</button>
+          </div>
+        </div>
+
+        <!-- Change Due Box -->
+        <div class="change-due-box">
+          <span class="form-label" style="margin:0;">Tiền thừa trả khách:</span>
+          <span id="modal-change-due" class="change-due-val positive">0 đ</span>
+        </div>
+
+        <!-- QR section -->
+        <div id="section-qr" style="display: none; text-align: center; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--color-primary);">
+          <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 8px;">Quét mã VietQR chuyển khoản nhanh</div>
+          <div id="qr-container" style="background:#ffffff; padding:12px; display:inline-block; border-radius:8px; border:1px solid #e2e8f0;">
+            <div style="width:160px; height:160px; display:flex; align-items:center; justify-content:center; background:#f1f5f9; color:#64748b; font-size:12px; font-weight:700;">
+              MÃ VIETQR DỰNG TỰ ĐỘNG
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Nội dung CK: <b id="qr-memo">BLE-00001</b></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-pay" class="btn btn-slate btn-lg" data-close="modal-payment">[Esc] Quay lại</button>
+        <button id="btn-submit-pay" class="btn btn-payment btn-lg">[Enter] XÁC NHẬN THANH TOÁN & IN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. QUANTITY MODAL -->
+  <div id="modal-qty" class="modal-overlay">
+    <div class="modal-box" style="max-width: 420px;">
+      <div class="modal-header">
+        <div class="modal-title">ĐỔI SỐ LƯỢNG MẶT HÀNG</div>
+        <button class="modal-close-btn" data-close="modal-qty">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="qty-item-title" style="font-weight: 700; color: var(--text-main); font-size: 14px;"></div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label class="form-label">Nhập số lượng mới:</label>
+          <input type="number" id="input-new-qty" class="form-input" min="1" step="1" value="1">
+          <div style="display: flex; gap: 6px; margin-top: 8px;">
+            <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-step="-1">-1</button>
+            <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-step="1">+1</button>
+            <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-step="5">+5</button>
+            <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-step="10">+10</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-slate" data-close="modal-qty">[Esc] Hủy</button>
+        <button id="btn-submit-qty" class="btn btn-blue">[Enter] Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. DISCOUNT MODAL -->
+  <div id="modal-discount" class="modal-overlay">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">CHIẾT KHẤU / GIẢM GIÁ ĐƠN HÀNG</div>
+        <button class="modal-close-btn" data-close="modal-discount">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Loại giảm giá:</label>
+          <div style="display: flex; gap: 10px;">
+            <label style="font-size: 13px; font-weight: 600; cursor: pointer;">
+              <input type="radio" name="discount-type" value="percent" checked> Giảm theo Phần trăm (%)
+            </label>
+            <label style="font-size: 13px; font-weight: 600; cursor: pointer;">
+              <input type="radio" name="discount-type" value="amount"> Giảm theo Tiền mặt (VNĐ)
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="discount-input-label">Tỷ lệ giảm (%):</label>
+          <input type="number" id="input-discount-val" class="form-input" min="0" max="100" step="1" placeholder="Ví dụ: 10">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-slate" data-close="modal-discount">[Esc] Hủy</button>
+        <button id="btn-submit-discount" class="btn btn-amber">[Enter] Áp dụng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. DRAFT SALES MODAL -->
+  <div id="modal-drafts" class="modal-overlay">
+    <div class="modal-box" style="max-width: 650px;">
+      <div class="modal-header">
+        <div class="modal-title">DANH SÁCH HÓA ĐƠN TẠM ĐANG TREO (BANLE_TAM)</div>
+        <button class="modal-close-btn" data-close="modal-drafts">✕</button>
+      </div>
+      <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+        <table class="cart-table">
+          <thead>
+            <tr>
+              <th>Số CT</th>
+              <th>Thời gian</th>
+              <th>Khách hàng</th>
+              <th style="text-align: center;">SL</th>
+              <th style="text-align: right;">Tổng tiền</th>
+              <th style="text-align: center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="draft-sales-body">
+            <!-- Dynamic Draft Rows -->
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-slate" data-close="modal-drafts">[Esc] Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. CUSTOMER MODAL -->
+  <div id="modal-customer" class="modal-overlay">
+    <div class="modal-box" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title">CHỌN KHÁCH HÀNG / TÍCH ĐIỂM (DM_KH_NCC)</div>
+        <button class="modal-close-btn" data-close="modal-customer">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="input-search-customer" class="form-input" placeholder="Tìm theo tên, số điện thoại hoặc mã khách..." autofocus>
+        <div id="customer-list-box" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 6px;">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-choose-walkin" class="btn btn-outline" style="margin-right: auto;">Khách lẻ vãng lai</button>
+        <button class="btn btn-slate" data-close="modal-customer">[Esc] Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. LOCK MODAL -->
+  <div id="modal-lock" class="modal-overlay">
+    <div class="modal-box" style="max-width: 380px; text-align: center;">
+      <div class="modal-header" style="background-color: var(--btn-dark);">
+        <div class="modal-title">MÁY ĐANG TẠM KHÓA</div>
+      </div>
+      <div class="modal-body" style="align-items: center;">
+        <p style="font-size: 13px; color: var(--text-secondary);">Nhập mật khẩu thu ngân để mở khóa phiên làm việc:</p>
+        <input type="password" id="input-unlock-pass" class="form-input" style="text-align: center;" placeholder="••••••">
+      </div>
+      <div class="modal-footer" style="justify-content: center;">
+        <button id="btn-unlock" class="btn btn-blue btn-lg">MỞ KHÓA MÁY</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

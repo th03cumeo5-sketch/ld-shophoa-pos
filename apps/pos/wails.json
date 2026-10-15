@@ -1,0 +1,9 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "ShopHoa POS",
+  "outputfilename": "ShopHoaPOS",
+  "author": {
+    "name": "ntd",
+    "email": "ntd"
+  }
+}
